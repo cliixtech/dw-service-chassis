@@ -1,0 +1,32 @@
+server:
+  type: default
+  maxThreads: 1024
+
+  gzip:
+    enabled: true
+    bufferSize: 8KiB
+
+  requestLog:
+    appenders: []
+
+  applicationConnectors:
+    - type: http
+      port: 8080
+
+  adminConnectors:
+    - type: http
+      port: 8081
+
+  rootPath: '/app'
+  registerDefaultExceptionMappers: false
+
+logging:
+  appenders:
+    - type: console
+      threshold: ALL
+      timeZone: UTC
+      target: stdout
+      logFormat: "%p [%d] %c{10}:%X{ctx}: %m %ex{3} %n"
+
+swagger:
+  resourcePackage: rest

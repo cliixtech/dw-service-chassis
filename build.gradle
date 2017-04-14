@@ -1,0 +1,122 @@
+plugins {
+  id 'java'
+  id 'application'
+  id 'eclipse'
+  id 'idea'
+  id 'jacoco'
+
+  // community plugins
+  id 'com.github.ben-manes.versions' version '0.14.0'
+  id 'com.diffplug.gradle.spotless' version '2.4.1'
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+mainClassName = "application.App"
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+  maven { url "https://jitpack.io" }
+}
+
+ext {
+    datanucleusVersion = "5.1.0-m1"
+    dropwizardVersion = "1.1.0"
+}
+
+dependencies {
+  compile("com.github.cliixtech:abacus:3.3.3") {
+    exclude group: 'org.slf4j'
+    exclude module: 'log4j'
+  }
+  compile(
+    "com.github.cliixtech:memlo:4.0.0",
+    "org.datanucleus:javax.jdo:3.2.0-m6",
+    "org.datanucleus:datanucleus-api-jdo:${datanucleusVersion}",
+    "org.datanucleus:datanucleus-core:${datanucleusVersion}",
+    "org.projectlombok:lombok:1.16.16",
+    "io.dropwizard:dropwizard-core:" + dropwizardVersion,
+    "io.dropwizard:dropwizard-validation:" + dropwizardVersion,
+    "io.dropwizard:dropwizard-client:" + dropwizardVersion,
+    "com.smoketurner:dropwizard-swagger:1.1.0-1",
+    "org.datanucleus:datanucleus-accessplatform-jdo-rdbms:${datanucleusVersion}",
+    "org.flywaydb:flyway-core:4.1.2",
+  )
+
+  testCompile(
+    'junit:junit:4.12',
+    'org.assertj:assertj-core:3.6.2',
+    'org.mockito:mockito-all:2.0.2-beta'
+  )
+
+  runtime (
+    "org.postgresql:postgresql:42.0.0",
+    "org.apache.derby:derby:10.13.1.1"
+  )
+}
+
+idea {
+    module {
+        sourceDirs += file('src/main/java')
+        testSourceDirs += file('src/test/java')
+    }
+}
+
+run {
+    args 'server', 'app_config.yml'
+}
+
+test {
+    reports.html.enabled = true
+    reports.junitXml.enabled = false
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled false
+        csv.enabled false
+        html.enabled true
+    }
+}
+
+spotless {
+    java {
+        importOrderFile 'cliix.importorder'
+        eclipseFormatFile 'cliix.eclipseformat.xml'
+    }
+}
+
+task datanucleusEnhance {
+    description "Enhance JDO model classes using DataNucleus Enhancer"
+
+    doLast {
+        // define the entity classes
+        def entityFiles = fileTree(sourceSets.main.output.classesDir).matching {
+            include '**/*.class'
+        }
+
+        // define Ant task for DataNucleus Enhancer
+        ant.taskdef(
+            name : 'datanucleusenhancer',
+            classpath : sourceSets.main.runtimeClasspath.asPath,
+            classname : 'org.datanucleus.enhancer.EnhancerTask'
+        )
+
+        // run the DataNucleus Enhancer as an Ant task
+        ant.datanucleusenhancer(
+            classpath: sourceSets.main.runtimeClasspath.asPath,
+            verbose: true,
+            api: "JDO") {
+            entityFiles.addToAntBuilder(ant, 'fileset', FileCollection.AntType.FileSet)
+        }
+    }
+}
+
+compileJava.finalizedBy datanucleusEnhance
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.5'
+}
+

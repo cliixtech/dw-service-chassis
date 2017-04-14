@@ -1,0 +1,13 @@
+machine:
+    java:
+        version: oraclejdk8
+    services:
+        - docker
+
+test:
+    override:
+        - ./gradlew check jacocoTestReport
+    post:
+    - cp -rf build/reports/* $CIRCLE_TEST_REPORTS/
+
+
